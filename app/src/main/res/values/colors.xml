@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Selavu</string>
+    <!-- Material3 Primary Teal -->
+    <color name="primary">#1D9E75</color>
+    <color name="primary_dark">#157D5E</color>
+    <color name="accent">#1D9E75</color>
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+</resources>

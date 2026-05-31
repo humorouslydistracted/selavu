@@ -1,0 +1,25 @@
+# Sensitive data
+PAT
+local.properties
+error.txt
+
+# Build artifacts
+.gradle/
+.kotlin/
+build/
+app/build/
+
+# Backup files
+expense tracker/
+expense tracker.zip
+
+# IDE
+.idea/
+*.iml
+
+# Windsurf
+.windsurf/
+
+# OS
+.DS_Store
+Thumbs.db
