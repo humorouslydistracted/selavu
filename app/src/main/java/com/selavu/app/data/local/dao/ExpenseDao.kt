@@ -20,23 +20,23 @@ interface ExpenseDao {
 
     @Query("""
         SELECT SUM(amount) FROM expenses 
-        WHERE date >= :startDate AND date <= :endDate
+        WHERE date >= :startDate AND date <= :endDate AND include = 1
     """)
     suspend fun getTotalForDateRange(startDate: String, endDate: String): Double?
 
-    @Query("SELECT SUM(amount) FROM expenses WHERE date = :date")
+    @Query("SELECT SUM(amount) FROM expenses WHERE date = :date AND include = 1")
     suspend fun getTotalForDate(date: String): Double?
 
     @Query("""
         SELECT SUM(amount) FROM expenses 
-        WHERE date >= :monthStart AND date <= :monthEnd
+        WHERE date >= :monthStart AND date <= :monthEnd AND include = 1
     """)
     suspend fun getMonthTotal(monthStart: String, monthEnd: String): Double?
 
     @Query("SELECT COUNT(*) FROM expenses WHERE date = :date")
     suspend fun getCountForDate(date: String): Int
 
-    @Query("SELECT SUM(amount) FROM expenses WHERE date = :todayDate")
+    @Query("SELECT SUM(amount) FROM expenses WHERE date = :todayDate AND include = 1")
     suspend fun getTodayTotal(todayDate: String): Double?
 
     @Query("DELETE FROM expenses")

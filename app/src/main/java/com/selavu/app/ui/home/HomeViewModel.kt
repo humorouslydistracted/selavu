@@ -50,7 +50,8 @@ class HomeViewModel @Inject constructor(
         amount: Double,
         date: LocalDate?,
         selectedItemId: Int?,
-        notes: String
+        notes: String,
+        include: Boolean
     ) {
         viewModelScope.launch {
             val expense = ExpenseEntity(
@@ -59,7 +60,8 @@ class HomeViewModel @Inject constructor(
                 amount = amount,
                 date = (date ?: LocalDate.now()).toString(),
                 createdAt = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
-                notes = notes
+                notes = notes,
+                include = include
             )
             repository.insertExpense(expense)
             refreshTotals()

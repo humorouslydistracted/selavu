@@ -105,8 +105,8 @@ fun HomeScreen(
                 )
                 FlowRow(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     savedItems.forEach { item ->
                         SuggestionChip(
@@ -131,8 +131,8 @@ fun HomeScreen(
 
             ManualEntryForm(
                 currencySymbol = currencySymbol,
-                onSave = { name, amount, date, itemId, notes ->
-                    viewModel.saveExpense(name, amount, date, itemId, notes)
+                onSave = { name, amount, date, itemId, notes, include ->
+                    viewModel.saveExpense(name, amount, date, itemId, notes, include)
                     scope.launch {
                         snackbarHostState.showSnackbar("Saved")
                     }
@@ -147,8 +147,8 @@ fun HomeScreen(
                 item = showItemPopup!!,
                 currencySymbol = currencySymbol,
                 onDismiss = { showItemPopup = null },
-                onSave = { amount, date, notes ->
-                    viewModel.saveExpense(showItemPopup!!.name, amount, date, showItemPopup!!.id, notes)
+                onSave = { amount, date, notes, include ->
+                    viewModel.saveExpense(showItemPopup!!.name, amount, date, showItemPopup!!.id, notes, include)
                     showItemPopup = null
                     scope.launch {
                         snackbarHostState.showSnackbar("Saved")
@@ -278,7 +278,7 @@ fun FlowRow(
 @Composable
 fun ManualEntryForm(
     currencySymbol: String,
-    onSave: (String, Double, LocalDate?, Int?, String) -> Unit,
+    onSave: (String, Double, LocalDate?, Int?, String, Boolean) -> Unit,
     findMatchingItem: suspend (String) -> ItemEntity?,
     serverItems: List<ItemEntity>
 ) {
@@ -291,6 +291,7 @@ fun ManualEntryForm(
     var hasAmountFocused by remember { mutableStateOf(false) }
     var notes by remember { mutableStateOf("") }
     var notesError by remember { mutableStateOf<String?>(null) }
+    var include by remember { mutableStateOf(true) }
 
     val context = LocalContext.current
 
@@ -443,6 +444,18 @@ fun ManualEntryForm(
             )
         )
 
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Checkbox(
+                checked = include,
+                onCheckedChange = { include = it }
+            )
+            Text("Include in total", style = MaterialTheme.typography.bodyMedium)
+        }
+
         Button(
             onClick = {
                 val validation = validateAmount(amountText)
@@ -450,7 +463,7 @@ fun ManualEntryForm(
                     amountError = validation.message
                 } else {
                     val amount = amountText.toDoubleOrNull() ?: 0.0
-                    onSave(itemName, amount, selectedDate, selectedItemId, notes)
+                    onSave(itemName, amount, selectedDate, selectedItemId, notes, include)
                     itemName = ""
                     amountText = ""
                     selectedDate = null
@@ -459,6 +472,7 @@ fun ManualEntryForm(
                     hasAmountFocused = false
                     notes = ""
                     notesError = null
+                    include = true
                 }
             },
             modifier = Modifier.fillMaxWidth(),
@@ -479,7 +493,7 @@ fun ItemPopup(
     item: ItemEntity,
     currencySymbol: String,
     onDismiss: () -> Unit,
-    onSave: (Double, LocalDate?, String) -> Unit
+    onSave: (Double, LocalDate?, String, Boolean) -> Unit
 ) {
     var amountText by remember { mutableStateOf("") }
     var selectedDate by remember { mutableStateOf<LocalDate?>(null) }
@@ -487,6 +501,7 @@ fun ItemPopup(
     var amountError by remember { mutableStateOf<String?>(null) }
     var notesError by remember { mutableStateOf<String?>(null) }
     var hasAmountFocused by remember { mutableStateOf(false) }
+    var include by remember { mutableStateOf(true) }
     val context = LocalContext.current
     val amountFocusRequester = remember { FocusRequester() }
 
@@ -537,7 +552,7 @@ fun ItemPopup(
                         val validation = validateAmount(amountText)
                         if (validation is AmountValidationResult.Valid) {
                             val amount = amountText.toDoubleOrNull() ?: 0.0
-                            onSave(amount, selectedDate, notes)
+                            onSave(amount, selectedDate, notes, include)
                         } else {
                             amountError = (validation as AmountValidationResult.Error).message
                         }
@@ -613,6 +628,18 @@ fun ItemPopup(
                 )
             )
 
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Checkbox(
+                    checked = include,
+                    onCheckedChange = { include = it }
+                )
+                Text("Include in total", style = MaterialTheme.typography.bodyMedium)
+            }
+
             Button(
                 onClick = {
                     val validation = validateAmount(amountText)
@@ -620,7 +647,7 @@ fun ItemPopup(
                         amountError = validation.message
                     } else {
                         val amount = amountText.toDoubleOrNull() ?: 0.0
-                        onSave(amount, selectedDate, notes)
+                        onSave(amount, selectedDate, notes, include)
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),

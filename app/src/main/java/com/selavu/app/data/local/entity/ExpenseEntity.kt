@@ -21,5 +21,6 @@ data class ExpenseEntity(
     val amount: Double,
     val date: String,
     @ColumnInfo(name = "created_at") val createdAt: String,
-    val notes: String = ""
+    val notes: String = "",
+    @ColumnInfo(name = "include") val include: Boolean = true
 )

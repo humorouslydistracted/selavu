@@ -40,6 +40,11 @@ class ExpenseRepository @Inject constructor(
         writeCsvBackup()
     }
 
+    suspend fun updateItem(item: ItemEntity) {
+        itemDao.updateItem(item)
+        writeCsvBackup()
+    }
+
     suspend fun getExpenseCountForItem(itemId: Int) = itemDao.getExpenseCountForItem(itemId)
     suspend fun getTotalAmountForItem(itemId: Int) = itemDao.getTotalAmountForItem(itemId)
 
@@ -98,7 +103,8 @@ class ExpenseRepository @Inject constructor(
                     amount = row.amount,
                     date = row.date,
                     createdAt = row.createdAt,
-                    notes = row.notes
+                    notes = row.notes,
+                    include = row.include
                 )
                 val result = expenseDao.insertAllExpenses(listOf(expense))
                 if (result.isNotEmpty() && result[0] != -1L) {
@@ -130,7 +136,8 @@ class ExpenseRepository @Inject constructor(
         val amount: Double,
         val date: String,
         val createdAt: String,
-        val notes: String
+        val notes: String,
+        val include: Boolean
     )
 
     private suspend fun parseCsvRows(uri: android.net.Uri): List<CsvExpenseRow> =
@@ -144,6 +151,7 @@ class ExpenseRepository @Inject constructor(
                     val parts = line!!
                     if (parts.size >= 5) {
                         val parsedId = parts[0].trim().toIntOrNull()
+                        val includeValue = if (parts.size > 7) parts[7].trim().toBoolean() else true
                         rows.add(
                             CsvExpenseRow(
                                 id = parsedId,
@@ -153,7 +161,8 @@ class ExpenseRepository @Inject constructor(
                                 date = parts[4],
                                 createdAt = if (parts.size > 5) parts[5] else
                                     LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
-                                notes = if (parts.size > 6) parts[6] else ""
+                                notes = if (parts.size > 6) parts[6] else "",
+                                include = includeValue
                             )
                         )
                     }
@@ -186,7 +195,7 @@ class ExpenseRepository @Inject constructor(
             context.contentResolver.openOutputStream(uri)?.use { outputStream ->
                 val expenses = expenseDao.getAllExpenses().first()
                 val writer = java.io.PrintWriter(outputStream)
-                writer.println("id,item_name,item_id,amount,date,created_at,notes")
+                writer.println("id,item_name,item_id,amount,date,created_at,notes,include")
                 expenses.forEach { expense ->
                     val row = listOf(
                         expense.id.toString(),
@@ -195,7 +204,8 @@ class ExpenseRepository @Inject constructor(
                         String.format("%.1f", expense.amount),
                         expense.date,
                         expense.createdAt,
-                        escapeCsv(expense.notes)
+                        escapeCsv(expense.notes),
+                        expense.include.toString()
                     ).joinToString(",")
                     writer.println(row)
                 }
@@ -216,7 +226,7 @@ class ExpenseRepository @Inject constructor(
             val expenses = expenseDao.getAllExpenses().first()
             val file = File(context.filesDir, "selavu_backup.csv")
             FileWriter(file).use { writer ->
-                writer.write("id,item_name,item_id,amount,date,created_at,notes\n")
+                writer.write("id,item_name,item_id,amount,date,created_at,notes,include\n")
                 expenses.forEach { expense ->
                     val row = listOf(
                         expense.id.toString(),
@@ -225,7 +235,8 @@ class ExpenseRepository @Inject constructor(
                         String.format("%.1f", expense.amount),
                         expense.date,
                         expense.createdAt,
-                        escapeCsv(expense.notes)
+                        escapeCsv(expense.notes),
+                        expense.include.toString()
                     ).joinToString(",")
                     writer.write("$row\n")
                 }

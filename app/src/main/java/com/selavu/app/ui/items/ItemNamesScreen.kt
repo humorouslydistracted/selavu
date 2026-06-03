@@ -1,5 +1,6 @@
 package com.selavu.app.ui.items
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -8,16 +9,22 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.selavu.app.data.local.entity.ItemEntity
+import com.selavu.app.ui.theme.EditActiveBg
+import com.selavu.app.ui.theme.EditActiveBorder
+import com.selavu.app.ui.theme.PrimaryTeal
 import com.selavu.app.ui.theme.TagSavedItemBg
 import com.selavu.app.ui.theme.TagSavedItemText
 import com.selavu.app.util.validateItemName
@@ -33,6 +40,8 @@ fun ItemNamesScreen(
     var newItemName by remember { mutableStateOf("") }
     var itemToDelete by remember { mutableStateOf<ItemEntity?>(null) }
     var itemStats by remember { mutableStateOf<Pair<Int, Double>?>(null) }
+    var itemToEdit by remember { mutableStateOf<ItemEntity?>(null) }
+    var editItemName by remember { mutableStateOf("") }
 
     val existingNames = items.map { it.name }
     val addError = validateItemName(newItemName, existingNames)
@@ -43,11 +52,28 @@ fun ItemNamesScreen(
         }
     }
 
+    LaunchedEffect(itemToEdit) {
+        if (itemToEdit != null) {
+            editItemName = itemToEdit!!.name
+        }
+    }
+
     fun saveNewItem() {
         if (newItemName.isNotBlank() && addError == null) {
             viewModel.addItem(newItemName)
             newItemName = ""
             showAddInline = false
+        }
+    }
+
+    fun saveEditItem() {
+        if (itemToEdit != null && editItemName.isNotBlank()) {
+            val editError = validateItemName(editItemName, existingNames.filter { it != itemToEdit!!.name })
+            if (editError == null) {
+                viewModel.updateItem(itemToEdit!!.copy(name = editItemName))
+                itemToEdit = null
+                editItemName = ""
+            }
         }
     }
 
@@ -115,10 +141,21 @@ fun ItemNamesScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(items, key = { it.id }) { item ->
-                    ItemRow(
-                        item = item,
-                        onDelete = { itemToDelete = item }
-                    )
+                    if (itemToEdit == item) {
+                        EditItemRow(
+                            itemName = editItemName,
+                            onItemNameChange = { editItemName = it },
+                            onSave = { saveEditItem() },
+                            onCancel = { itemToEdit = null; editItemName = "" },
+                            existingNames = existingNames.filter { it != item.name }
+                        )
+                    } else {
+                        ItemRow(
+                            item = item,
+                            onDelete = { itemToDelete = item },
+                            onEdit = { itemToEdit = item }
+                        )
+                    }
                 }
             }
         }
@@ -145,7 +182,8 @@ fun ItemNamesScreen(
 @Composable
 fun ItemRow(
     item: ItemEntity,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onEdit: () -> Unit
 ) {
     Surface(
         color = TagSavedItemBg,
@@ -160,7 +198,18 @@ fun ItemRow(
                 color = TagSavedItemText,
                 style = MaterialTheme.typography.bodyMedium
             )
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.weight(1f))
+            IconButton(
+                onClick = onEdit,
+                modifier = Modifier.size(24.dp)
+            ) {
+                Icon(
+                    Icons.Default.Edit,
+                    contentDescription = "Edit",
+                    tint = TagSavedItemText,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
             IconButton(
                 onClick = onDelete,
                 modifier = Modifier.size(24.dp)
@@ -173,6 +222,74 @@ fun ItemRow(
                 )
             }
         }
+    }
+}
+
+@Composable
+fun EditItemRow(
+    itemName: String,
+    onItemNameChange: (String) -> Unit,
+    onSave: () -> Unit,
+    onCancel: () -> Unit,
+    existingNames: List<String>
+) {
+    val editError = validateItemName(itemName, existingNames)
+
+    Surface(
+        color = EditActiveBg,
+        shape = RoundedCornerShape(20.dp),
+        border = BorderStroke(1.dp, EditActiveBorder)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            OutlinedTextField(
+                value = itemName,
+                onValueChange = { newValue ->
+                    val allowed = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,'-_"
+                    if (newValue.all { it in allowed }) {
+                        onItemNameChange(newValue)
+                    }
+                },
+                modifier = Modifier.weight(1f),
+                singleLine = true,
+                isError = editError != null,
+                shape = RoundedCornerShape(8.dp),
+                textStyle = MaterialTheme.typography.bodyMedium
+            )
+            IconButton(
+                onClick = onSave,
+                modifier = Modifier.size(24.dp),
+                enabled = itemName.isNotBlank() && editError == null
+            ) {
+                Icon(
+                    Icons.Default.Check,
+                    contentDescription = "Save",
+                    tint = PrimaryTeal,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+            IconButton(
+                onClick = onCancel,
+                modifier = Modifier.size(24.dp)
+            ) {
+                Icon(
+                    Icons.Default.Close,
+                    contentDescription = "Cancel",
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
+    }
+    if (editError != null) {
+        Text(
+            editError,
+            color = MaterialTheme.colorScheme.error,
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.padding(start = 8.dp, bottom = 4.dp)
+        )
     }
 }
 

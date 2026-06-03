@@ -22,3 +22,6 @@ val DeleteDangerText = Color(0xFF791F1F)
 // Edit
 val EditActiveBg = Color(0xFFF5F5F3)
 val EditActiveBorder = Color(0xFFB4B2A9)
+
+// Excluded Entry
+val ExcludedEntryBg = Color(0xFFFFFEF0)

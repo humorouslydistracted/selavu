@@ -43,6 +43,12 @@ class ItemNamesViewModel @Inject constructor(
         }
     }
 
+    fun updateItem(item: ItemEntity) {
+        viewModelScope.launch {
+            repository.updateItem(item)
+        }
+    }
+
     suspend fun getItemStats(itemId: Int): Pair<Int, Double> {
         val count = repository.getExpenseCountForItem(itemId)
         val total = repository.getTotalAmountForItem(itemId) ?: 0.0

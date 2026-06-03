@@ -21,7 +21,8 @@ private data class LedgerFilterState(
     val singleDate: LocalDate? = null,
     val fromDate: LocalDate? = null,
     val toDate: LocalDate? = null,
-    val sortMode: SortMode = SortMode.DATE_DESC
+    val sortMode: SortMode = SortMode.DATE_DESC,
+    val showExcludedOnly: Boolean = false
 )
 
 private data class DateFilterState(
@@ -62,6 +63,9 @@ class LedgerViewModel @Inject constructor(
     private val _groupMode = MutableStateFlow(GroupMode.BY_DATE)
     val groupMode = _groupMode.asStateFlow()
 
+    private val _showExcludedOnly = MutableStateFlow(false)
+    val showExcludedOnly = _showExcludedOnly.asStateFlow()
+
     init {
         savedStateHandle.get<String>("fromDate")?.let { date ->
             _fromDate.value = LocalDate.parse(date)
@@ -92,15 +96,17 @@ class LedgerViewModel @Inject constructor(
     private val filterState: Flow<LedgerFilterState> = combine(
         _selectedItemIdsFilter,
         dateFilterState,
-        _sortMode
-    ) { itemIds, dates, sort ->
+        _sortMode,
+        _showExcludedOnly
+    ) { itemIds, dates, sort, showExcluded ->
         LedgerFilterState(
             itemIds = itemIds,
             dateMode = dates.dateMode,
             singleDate = dates.singleDate,
             fromDate = dates.fromDate,
             toDate = dates.toDate,
-            sortMode = sort
+            sortMode = sort,
+            showExcludedOnly = showExcluded
         )
     }
 
@@ -116,6 +122,11 @@ class LedgerViewModel @Inject constructor(
         filters: LedgerFilterState
     ): List<ExpenseEntity> {
         var filtered = expenses
+
+        // Filter by include/exclude status
+        filtered = filtered.filter { expense ->
+            if (filters.showExcludedOnly) !expense.include else expense.include
+        }
 
         if (filters.itemIds.isNotEmpty()) {
             filtered = filtered.filter { expense ->
@@ -193,6 +204,8 @@ class LedgerViewModel @Inject constructor(
     fun setFromDate(date: LocalDate?) { _fromDate.value = date }
     fun setToDate(date: LocalDate?) { _toDate.value = date }
     fun setGroupMode(mode: GroupMode) { _groupMode.value = mode }
+
+    fun setShowExcludedOnly(show: Boolean) { _showExcludedOnly.value = show }
 
     fun deleteExpense(expense: ExpenseEntity) {
         viewModelScope.launch {

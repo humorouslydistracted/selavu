@@ -15,6 +15,9 @@ interface ItemDao {
     @Delete
     suspend fun deleteItem(item: ItemEntity)
 
+    @Update
+    suspend fun updateItem(item: ItemEntity)
+
     @Query("SELECT COUNT(*) FROM expenses WHERE item_id = :itemId")
     suspend fun getExpenseCountForItem(itemId: Int): Int
 

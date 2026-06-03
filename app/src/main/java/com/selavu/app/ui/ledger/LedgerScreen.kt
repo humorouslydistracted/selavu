@@ -5,6 +5,7 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -23,6 +24,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -61,12 +63,12 @@ fun LedgerScreen(
     val singleDate by viewModel.singleDate.collectAsState()
     val fromDate by viewModel.fromDate.collectAsState()
     val toDate by viewModel.toDate.collectAsState()
+    val showExcludedOnly by viewModel.showExcludedOnly.collectAsState()
 
     val context = LocalContext.current
     var editingExpenseId by remember { mutableStateOf<Int?>(null) }
     val listState = rememberLazyListState()
-    var dateFiltersExpanded by remember { mutableStateOf(false) }
-    var groupSortExpanded by remember { mutableStateOf(false) }
+    var filtersExpanded by remember { mutableStateOf(false) }
 
     LaunchedEffect(editingExpenseId) {
         if (editingExpenseId != null) {
@@ -78,7 +80,7 @@ fun LedgerScreen(
     }
 
     Column(modifier = Modifier.fillMaxSize().imePadding()) {
-            // Date Filters Collapsible Section
+            // Sort and Filter Collapsible Section
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -90,27 +92,27 @@ fun LedgerScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { dateFiltersExpanded = !dateFiltersExpanded }
+                            .clickable { filtersExpanded = !filtersExpanded }
                             .padding(12.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            "Date Filters",
+                            "Sort & Filter",
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Medium
                         )
                         Icon(
-                            if (dateFiltersExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                            contentDescription = if (dateFiltersExpanded) "Collapse" else "Expand"
+                            if (filtersExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                            contentDescription = if (filtersExpanded) "Collapse" else "Expand"
                         )
                     }
                     AnimatedVisibility(
-                        visible = dateFiltersExpanded,
+                        visible = filtersExpanded,
                         enter = expandVertically() + fadeIn(),
                         exit = shrinkVertically() + fadeOut()
                     ) {
-                        Column(modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp)) {
+                        Column(modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             // Row 1: Date mode
                             SingleChoiceSegmentedButtonRow(
                                 modifier = Modifier.fillMaxWidth()
@@ -227,44 +229,7 @@ fun LedgerScreen(
                                     }
                                 }
                             }
-                        }
-                    }
-                }
-            }
 
-            // Group & Sort Collapsible Section
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
-                shape = RoundedCornerShape(8.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-            ) {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { groupSortExpanded = !groupSortExpanded }
-                            .padding(12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            "Group & Sort",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Medium
-                        )
-                        Icon(
-                            if (groupSortExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                            contentDescription = if (groupSortExpanded) "Collapse" else "Expand"
-                        )
-                    }
-                    AnimatedVisibility(
-                        visible = groupSortExpanded,
-                        enter = expandVertically() + fadeIn(),
-                        exit = shrinkVertically() + fadeOut()
-                    ) {
-                        Column(modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp)) {
                             // Row 3: Group controls + category dropdown
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -323,6 +288,21 @@ fun LedgerScreen(
                                     modifier = Modifier.weight(1f)
                                 )
                             }
+
+                            // Row 5: Show excluded only checkbox
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Checkbox(
+                                    checked = showExcludedOnly,
+                                    onCheckedChange = { viewModel.setShowExcludedOnly(it) }
+                                )
+                                Text(
+                                    "Show excluded only",
+                                    style = MaterialTheme.typography.labelMedium
+                                )
+                            }
                         }
                     }
                 }
@@ -330,7 +310,7 @@ fun LedgerScreen(
 
             val hasDateFilter = singleDate != null || fromDate != null || toDate != null
             if (hasDateFilter) {
-                val filteredTotal = expenses.sumOf { it.amount }
+                val filteredTotal = expenses.filter { it.include }.sumOf { it.amount }
                 val dateLabel = when {
                     dateMode == DateMode.SINGLE && singleDate != null ->
                         singleDate!!.format(displayDateFormatter)
@@ -348,28 +328,28 @@ fun LedgerScreen(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
                 ) {
                     Row(
-                        modifier = Modifier.padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.padding(12.dp, 16.dp, 12.dp, 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column {
-                            Text(dateLabel, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
-                            Text(
-                                "${expenses.size} entries",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                        Text(dateLabel, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                        Text("·", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            "${expenses.size} entries",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.weight(1f))
                         Text(
                             "$currencySymbol ${String.format("%,.0f", filteredTotal)}",
-                            style = MaterialTheme.typography.headlineSmall,
+                            style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold
                         )
                     }
                 }
             }
 
-            val grandTotal = expenses.sumOf { it.amount }
+            val grandTotal = expenses.filter { it.include }.sumOf { it.amount }
             val showDateOnRows = groupMode != GroupMode.BY_DATE
 
             Box(modifier = Modifier.weight(1f)) {
@@ -591,12 +571,12 @@ fun ExpenseGroupedList(
                 val othersExpenses = expenses.filter { it.itemId == null }
 
                 savedExpenses.groupBy { it.itemName }.forEach { (name, group) ->
-                    val subtotal = group.sumOf { it.amount }
-                    val pct = if (filteredTotal > 0) (subtotal / filteredTotal * 100) else 0.0
+                    val includedSubtotal = group.filter { it.include }.sumOf { it.amount }
+                    val pct = if (filteredTotal > 0) (includedSubtotal / filteredTotal * 100) else 0.0
                     item(key = "header_saved_$name") {
                         GroupHeader(
                             title = name,
-                            subtitle = "$currencySymbol ${String.format("%,.0f", subtotal)} · ${String.format("%.0f", pct)}%",
+                            subtitle = "$currencySymbol ${String.format("%,.0f", includedSubtotal)} · ${String.format("%.0f", pct)}%",
                             isOthers = false
                         )
                     }
@@ -617,7 +597,7 @@ fun ExpenseGroupedList(
                 }
 
                 if (othersExpenses.isNotEmpty()) {
-                    val othersTotal = othersExpenses.sumOf { it.amount }
+                    val othersTotal = othersExpenses.filter { it.include }.sumOf { it.amount }
                     val othersPct = if (filteredTotal > 0) (othersTotal / filteredTotal * 100) else 0.0
                     item(key = "header_others_parent") {
                         GroupHeader(
@@ -627,12 +607,12 @@ fun ExpenseGroupedList(
                         )
                     }
                     othersExpenses.groupBy { it.itemName }.forEach { (name, group) ->
-                        val subtotal = group.sumOf { it.amount }
-                        val pct = if (filteredTotal > 0) (subtotal / filteredTotal * 100) else 0.0
+                        val includedSubtotal = group.filter { it.include }.sumOf { it.amount }
+                        val pct = if (filteredTotal > 0) (includedSubtotal / filteredTotal * 100) else 0.0
                         item(key = "header_others_$name") {
                             SubGroupHeader(
                                 title = name,
-                                subtitle = "$currencySymbol ${String.format("%,.0f", subtotal)} · ${String.format("%.0f", pct)}%"
+                                subtitle = "$currencySymbol ${String.format("%,.0f", includedSubtotal)} · ${String.format("%.0f", pct)}%"
                             )
                         }
                         items(group, key = { it.id }) { expense ->
@@ -654,12 +634,12 @@ fun ExpenseGroupedList(
             }
             GroupMode.BY_DATE -> {
                 expenses.groupBy { it.date }.forEach { (date, group) ->
-                    val subtotal = group.sumOf { it.amount }
-                    val pct = if (filteredTotal > 0) (subtotal / filteredTotal * 100) else 0.0
+                    val includedSubtotal = group.filter { it.include }.sumOf { it.amount }
+                    val pct = if (filteredTotal > 0) (includedSubtotal / filteredTotal * 100) else 0.0
                     item(key = "header_$date") {
                         GroupHeader(
                             title = LocalDate.parse(date).format(displayDateFormatter),
-                            subtitle = "$currencySymbol ${String.format("%,.0f", subtotal)} · ${String.format("%.0f", pct)}%",
+                            subtitle = "$currencySymbol ${String.format("%,.0f", includedSubtotal)} · ${String.format("%.0f", pct)}%",
                             isOthers = false
                         )
                     }
@@ -761,6 +741,7 @@ fun ExpenseRow(
     var editItemName by remember(expense.id) { mutableStateOf(expense.itemName) }
     var editDate by remember(expense.id) { mutableStateOf(LocalDate.parse(expense.date)) }
     var editNotes by remember(expense.id) { mutableStateOf(expense.notes) }
+    var editInclude by remember(expense.id) { mutableStateOf(expense.include) }
     var amountError by remember { mutableStateOf<String?>(null) }
     var itemNameError by remember { mutableStateOf<String?>(null) }
     var notesError by remember { mutableStateOf<String?>(null) }
@@ -774,16 +755,17 @@ fun ExpenseRow(
     val isSavedItem = expense.itemId != null
     val tagBg = if (isSavedItem) TagSavedItemBg else TagOthersBg
     val tagText = if (isSavedItem) TagSavedItemText else TagOthersText
-    val pct = if (filteredTotal > 0) (expense.amount / filteredTotal * 100) else 0.0
+    val pct = if (filteredTotal > 0 && expense.include) (expense.amount / filteredTotal * 100) else 0.0
     val formattedDate = remember(expense.date) {
         LocalDate.parse(expense.date).format(displayDateFormatter)
     }
 
-    LaunchedEffect(expense.amount, expense.date, expense.itemName, expense.notes) {
+    LaunchedEffect(expense.amount, expense.date, expense.itemName, expense.notes, expense.include) {
         editAmount = expense.amount.toString()
         editItemName = expense.itemName
         editDate = LocalDate.parse(expense.date)
         editNotes = expense.notes
+        editInclude = expense.include
     }
 
     fun validateEditItemName(name: String): String? {
@@ -800,10 +782,17 @@ fun ExpenseRow(
             animationSpec = tween(200)
         ) { fullHeight -> -fullHeight / 2 }
     ) {
-        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 4.dp)
+        ) {
             if (!isEditing && !isDeleting) {
+                val rowBackgroundColor = if (!expense.include) ExcludedEntryBg else Color.Transparent
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(rowBackgroundColor, RoundedCornerShape(8.dp)),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Surface(color = tagBg, shape = RoundedCornerShape(20.dp)) {
@@ -836,12 +825,14 @@ fun ExpenseRow(
                         fontWeight = FontWeight.Bold,
                         style = MaterialTheme.typography.bodyMedium
                     )
-                    Spacer(Modifier.width(4.dp))
-                    Text(
-                        "${String.format("%.0f", pct)}%",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    if (expense.include) {
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            "${String.format("%.0f", pct)}%",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                     IconButton(onClick = onStartEdit, modifier = Modifier.size(28.dp)) {
                         Icon(Icons.Default.Edit, "Edit", modifier = Modifier.size(16.dp))
                     }
@@ -948,6 +939,17 @@ fun ExpenseRow(
 
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Checkbox(
+                                checked = editInclude,
+                                onCheckedChange = { editInclude = it }
+                            )
+                            Text("Include in total", style = MaterialTheme.typography.bodyMedium)
+                        }
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.padding(top = 4.dp)
                         ) {
                             OutlinedButton(
@@ -985,7 +987,8 @@ fun ExpenseRow(
                                             itemId = matchedItem?.id,
                                             amount = amt,
                                             date = editDate.toString(),
-                                            notes = editNotes
+                                            notes = editNotes,
+                                            include = editInclude
                                         )
                                     )
                                     onCancelEdit()

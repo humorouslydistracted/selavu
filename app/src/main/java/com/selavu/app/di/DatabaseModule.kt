@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.room.Room
 import com.selavu.app.data.local.MIGRATION_1_2
+import com.selavu.app.data.local.MIGRATION_2_3
 import com.selavu.app.data.local.SelavuDatabase
 import com.selavu.app.data.local.dao.ExpenseDao
 import com.selavu.app.data.local.dao.ItemDao
@@ -26,7 +27,7 @@ object DatabaseModule {
             SelavuDatabase::class.java,
             SelavuDatabase.DATABASE_NAME
         )
-        .addMigrations(MIGRATION_1_2)
+        .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
         .fallbackToDestructiveMigration()
         .build()
     }
