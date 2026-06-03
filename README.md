@@ -2,6 +2,17 @@
 
 Selavu is a lightweight, offline-first expense tracking app built with Kotlin + Jetpack Compose. Designed for personal finance management, it runs entirely on-device with no internet required.
 
+<p align="center">
+<a href="screenshots/selavu_home.png"><img src="screenshots/selavu_home.png" height="384" alt="Home screen with quick-add chips and manual entry"/></a>
+<a href="screenshots/selavu_item_names.png"><img src="screenshots/selavu_item_names.png" height="384" alt="Saved item names management"/></a>
+<a href="screenshots/selavu_ledger.png"><img src="screenshots/selavu_ledger.png" height="384" alt="Expense ledger with date grouping"/></a>
+<a href="screenshots/selavu_ledger_filter.png"><img src="screenshots/selavu_ledger_filter.png" height="384" alt="Ledger sort and filter options"/></a>
+<a href="screenshots/selavu_ledger_excluded_list.png"><img src="screenshots/selavu_ledger_excluded_list.png" height="384" alt="Excluded expenses view"/></a>
+<a href="screenshots/selavu_settings.png"><img src="screenshots/selavu_settings.png" height="384" alt="Settings — backup, display, and data"/></a>
+</p>
+
+---
+
 ## ✨ Features
 
 - **Fast expense entry** — Save expenses in under 3 seconds with quick-add chips
@@ -13,12 +24,6 @@ Selavu is a lightweight, offline-first expense tracking app built with Kotlin + 
 - **CSV backup** — Auto-sync on every transaction + manual import/export
 - **Private & secure** — No accounts, no tracking, data stays on your device
 - **Minimal UI** — Clean, frictionless Material 3 design
-
-## 📱 Screenshots
-
-```
-/screenshots
-```
 
 ## 🏗️ Architecture
 
