@@ -23,3 +23,6 @@ expense tracker.zip
 # OS
 .DS_Store
 Thumbs.db
+keystore.properties
+upload-keystore.jks
+*.jks
