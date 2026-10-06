@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.selavu.app.data.local.entity.ExpenseEntity
 import com.selavu.app.data.local.entity.ItemEntity
+import com.selavu.app.data.local.entity.QuickActionEntity
 import com.selavu.app.data.repository.ExpenseRepository
 import com.selavu.app.util.levenshteinDistance
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -20,6 +21,10 @@ class HomeViewModel @Inject constructor(
 ) : ViewModel() {
 
     val savedItems = repository.allItems.stateIn(
+        viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList()
+    )
+
+    val quickActions = repository.allQuickActions.stateIn(
         viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList()
     )
 
@@ -64,6 +69,36 @@ class HomeViewModel @Inject constructor(
                 include = include
             )
             repository.insertExpense(expense)
+            refreshTotals()
+        }
+    }
+
+    /**
+     * Logs a quick action as an expense dated today. Links to a saved item with the same name
+     * (case-insensitive) when one exists, otherwise leaves itemId null.
+     * [onLogged] receives the inserted expense (with its generated id) so the caller can offer Undo.
+     */
+    fun logQuickAction(action: QuickActionEntity, onLogged: (ExpenseEntity) -> Unit) {
+        viewModelScope.launch {
+            val matched = repository.getItemByName(action.name)
+            val expense = ExpenseEntity(
+                itemName = matched?.name ?: action.name,
+                itemId = matched?.id,
+                amount = action.amount,
+                date = LocalDate.now().toString(),
+                createdAt = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
+                notes = "",
+                include = true
+            )
+            val newId = repository.insertExpense(expense)
+            refreshTotals()
+            onLogged(expense.copy(id = newId.toInt()))
+        }
+    }
+
+    fun undoExpense(expense: ExpenseEntity) {
+        viewModelScope.launch {
+            repository.deleteExpense(expense)
             refreshTotals()
         }
     }

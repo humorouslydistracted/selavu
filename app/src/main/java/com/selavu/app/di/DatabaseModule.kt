@@ -5,6 +5,8 @@ import android.content.SharedPreferences
 import androidx.room.Room
 import com.selavu.app.data.local.MIGRATION_1_2
 import com.selavu.app.data.local.MIGRATION_2_3
+import com.selavu.app.data.local.MIGRATION_3_4
+import com.selavu.app.data.local.dao.QuickActionDao
 import com.selavu.app.data.local.SelavuDatabase
 import com.selavu.app.data.local.dao.ExpenseDao
 import com.selavu.app.data.local.dao.ItemDao
@@ -27,7 +29,7 @@ object DatabaseModule {
             SelavuDatabase::class.java,
             SelavuDatabase.DATABASE_NAME
         )
-        .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+        .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
         .fallbackToDestructiveMigration()
         .build()
     }
@@ -40,6 +42,11 @@ object DatabaseModule {
     @Provides
     fun provideExpenseDao(database: SelavuDatabase): ExpenseDao {
         return database.expenseDao()
+    }
+
+    @Provides
+    fun provideQuickActionDao(database: SelavuDatabase): QuickActionDao {
+        return database.quickActionDao()
     }
 
     @Provides

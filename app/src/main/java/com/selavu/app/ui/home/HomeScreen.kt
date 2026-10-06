@@ -29,6 +29,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.selavu.app.data.local.entity.ItemEntity
+import com.selavu.app.ui.theme.TagQuickActionBg
+import com.selavu.app.ui.theme.TagQuickActionText
 import com.selavu.app.ui.theme.TagSavedItemBg
 import com.selavu.app.ui.theme.TagSavedItemText
 import com.selavu.app.util.AmountValidationResult
@@ -49,6 +51,7 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val savedItems by viewModel.savedItems.collectAsState()
+    val quickActions by viewModel.quickActions.collectAsState()
     val monthTotal by viewModel.monthTotal.collectAsState()
     val todayTotal by viewModel.todayTotal.collectAsState()
 
@@ -99,7 +102,7 @@ fun HomeScreen(
 
             if (savedItems.isNotEmpty()) {
                 Text(
-                    "QUICK ADD",
+                    "ITEMS",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -116,6 +119,47 @@ fun HomeScreen(
                             colors = SuggestionChipDefaults.suggestionChipColors(
                                 containerColor = TagSavedItemBg,
                                 labelColor = TagSavedItemText
+                            )
+                        )
+                    }
+                }
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            }
+
+            if (quickActions.isNotEmpty()) {
+                Text(
+                    "QUICK ACTIONS",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    quickActions.forEach { action ->
+                        val amountLabel = formatQuickAmount(action.amount)
+                        SuggestionChip(
+                            onClick = {
+                                viewModel.logQuickAction(action) { expense ->
+                                    scope.launch {
+                                        snackbarHostState.currentSnackbarData?.dismiss()
+                                        val result = snackbarHostState.showSnackbar(
+                                            message = "${action.name} $currencySymbol$amountLabel added",
+                                            actionLabel = "Undo",
+                                            duration = SnackbarDuration.Short
+                                        )
+                                        if (result == SnackbarResult.ActionPerformed) {
+                                            viewModel.undoExpense(expense)
+                                        }
+                                    }
+                                }
+                            },
+                            label = { Text("${action.name}: $currencySymbol$amountLabel") },
+                            shape = RoundedCornerShape(20.dp),
+                            colors = SuggestionChipDefaults.suggestionChipColors(
+                                containerColor = TagQuickActionBg,
+                                labelColor = TagQuickActionText
                             )
                         )
                     }
@@ -210,6 +254,10 @@ This is used only for backup. No data is read from other folders, and nothing is
         }
     }
 }
+
+/** 15.0 -> "15", 12.5 -> "12.5" */
+private fun formatQuickAmount(amount: Double): String =
+    if (amount % 1.0 == 0.0) amount.toLong().toString() else amount.toString()
 
 @Composable
 fun MonthlySummaryBanner(
@@ -510,11 +558,18 @@ fun ItemPopup(
         try { amountFocusRequester.requestFocus() } catch (_: Exception) {}
     }
 
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    // Open fully expanded so the Save button is never left below the visible area.
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(
             modifier = Modifier
-                .padding(16.dp)
-                .padding(bottom = 32.dp),
+                // Keep content clear of the gesture/navigation bar and above the keyboard.
+                .navigationBarsPadding()
+                .imePadding()
+                // Fallback so Save stays reachable on short screens.
+                .verticalScroll(rememberScrollState())
+                .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Row(

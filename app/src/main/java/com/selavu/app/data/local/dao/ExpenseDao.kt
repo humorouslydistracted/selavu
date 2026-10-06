@@ -10,7 +10,7 @@ interface ExpenseDao {
     fun getAllExpenses(): Flow<List<ExpenseEntity>>
 
     @Insert
-    suspend fun insertExpense(expense: ExpenseEntity)
+    suspend fun insertExpense(expense: ExpenseEntity): Long
 
     @Update
     suspend fun updateExpense(expense: ExpenseEntity)

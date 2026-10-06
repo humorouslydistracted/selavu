@@ -33,6 +33,7 @@ import androidx.navigation.navArgument
 import com.selavu.app.data.repository.ExpenseRepository
 import com.selavu.app.ui.home.HomeScreen
 import com.selavu.app.ui.items.ItemNamesScreen
+import com.selavu.app.ui.quickactions.QuickActionsScreen
 import com.selavu.app.ui.ledger.LedgerScreen
 import com.selavu.app.ui.settings.SettingsScreen
 import com.selavu.app.ui.theme.SelavuTheme
@@ -178,6 +179,9 @@ class MainActivity : ComponentActivity() {
                             ) {
                                 LedgerScreen(currencySymbol = currencySymbol)
                             }
+                            composable("quickactions") {
+                                QuickActionsScreen(currencySymbol = currencySymbol)
+                            }
                             composable("items") {
                                 ItemNamesScreen(currencySymbol = currencySymbol)
                             }
@@ -320,6 +324,16 @@ fun DrawerContent(
         HorizontalDivider()
         Spacer(Modifier.weight(1f))
 
+        NavigationDrawerItem(
+            label = { Text("Quick actions") },
+            selected = currentRoute == "quickactions",
+            onClick = {
+                navController.navigate("quickactions")
+                onClose()
+            },
+            icon = { Icon(Icons.Default.FlashOn, contentDescription = null) },
+            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+        )
         NavigationDrawerItem(
             label = { Text("Item names") },
             selected = currentRoute == "items",

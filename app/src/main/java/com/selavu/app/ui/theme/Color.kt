@@ -11,6 +11,8 @@ val ErrorRed = Color(0xFFE24B4A)
 // Tags
 val TagSavedItemBg = Color(0xFFE6F1FB)
 val TagSavedItemText = Color(0xFF0C447C)
+val TagQuickActionBg = Color(0xFFE1F5EE)
+val TagQuickActionText = Color(0xFF085041)
 val TagOthersBg = Color(0xFFF1EFE8)
 val TagOthersText = Color(0xFF444441)
 

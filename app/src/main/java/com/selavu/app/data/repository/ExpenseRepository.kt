@@ -5,8 +5,10 @@ import android.content.Intent
 import android.content.SharedPreferences
 import com.selavu.app.data.local.dao.ExpenseDao
 import com.selavu.app.data.local.dao.ItemDao
+import com.selavu.app.data.local.dao.QuickActionDao
 import com.selavu.app.data.local.entity.ExpenseEntity
 import com.selavu.app.data.local.entity.ItemEntity
+import com.selavu.app.data.local.entity.QuickActionEntity
 import com.opencsv.CSVReader
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -24,6 +26,7 @@ import javax.inject.Singleton
 class ExpenseRepository @Inject constructor(
     private val itemDao: ItemDao,
     private val expenseDao: ExpenseDao,
+    private val quickActionDao: QuickActionDao,
     @ApplicationContext private val context: Context,
     private val sharedPreferences: SharedPreferences
 ) {
@@ -48,9 +51,43 @@ class ExpenseRepository @Inject constructor(
     suspend fun getExpenseCountForItem(itemId: Int) = itemDao.getExpenseCountForItem(itemId)
     suspend fun getTotalAmountForItem(itemId: Int) = itemDao.getTotalAmountForItem(itemId)
 
-    suspend fun insertExpense(expense: ExpenseEntity) {
-        expenseDao.insertExpense(expense)
+    val allQuickActions = quickActionDao.getAllQuickActions()
+
+    suspend fun insertQuickAction(action: QuickActionEntity) {
+        quickActionDao.insertQuickAction(action)
+    }
+
+    suspend fun updateQuickAction(action: QuickActionEntity) {
+        quickActionDao.updateQuickAction(action)
+    }
+
+    suspend fun deleteQuickAction(action: QuickActionEntity) {
+        quickActionDao.deleteQuickAction(action)
+    }
+
+    /**
+     * Makes the stored quick actions match [actions]: entries with id == 0 are inserted,
+     * entries with an existing id are updated, and stored entries missing from the list are deleted.
+     */
+    suspend fun saveQuickActions(actions: List<QuickActionEntity>) {
+        val existing = quickActionDao.getAllQuickActions().first()
+        val keepIds = actions.filter { it.id != 0 }.map { it.id }.toSet()
+        existing.filter { it.id !in keepIds }.forEach { quickActionDao.deleteQuickAction(it) }
+        actions.forEach { action ->
+            if (action.id == 0) quickActionDao.insertQuickAction(action)
+            else {
+                val original = existing.find { it.id == action.id }
+                quickActionDao.updateQuickAction(
+                    action.copy(createdAt = original?.createdAt ?: action.createdAt)
+                )
+            }
+        }
+    }
+
+    suspend fun insertExpense(expense: ExpenseEntity): Long {
+        val id = expenseDao.insertExpense(expense)
         writeCsvBackup()
+        return id
     }
 
     suspend fun updateExpense(expense: ExpenseEntity) {
@@ -76,6 +113,7 @@ class ExpenseRepository @Inject constructor(
     suspend fun clearAllData() {
         expenseDao.deleteAllExpenses()
         itemDao.deleteAllItems()
+        quickActionDao.deleteAllQuickActions()
         writeCsvBackup()
     }
 
